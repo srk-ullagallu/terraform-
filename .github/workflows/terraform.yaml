@@ -1,0 +1,42 @@
+name: Provision Tool Infra
+on: [workflow_dispatch]
+jobs:
+  Provision:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Upload Plan for Approval
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: tfplan
+
+  Apply:
+    needs: Provision  # Ensure Apply waits for Plan completion
+    runs-on: self-hosted
+    environment:
+      name: production   # Requires manual approval for this environment
+      url: https://github.com/your-repo/actions/runs   # Optional: add a URL for more context
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
